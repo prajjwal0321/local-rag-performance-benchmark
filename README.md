@@ -2,6 +2,11 @@
 
 An empirical evaluation framework designed to benchmark system latency against textual chunk-size configurations in Retrieval-Augmented Generation (RAG) pipelines using 100% local consumer hardware.
 
+## 🔬 Complete Research Manuscript
+The empirical research paper detailing our system methodology, hardware benchmarks, and resource parameters is fully open-access:
+👉 **[Read the Full Research Paper (PDF)](./Prajjwal_Singh_RAG_Research_Paper.pdf)**
+
+
 ## 🚀 System Architecture
 - **Frontend UI:** Streamlit
 - **Orchestration:** LangChain
