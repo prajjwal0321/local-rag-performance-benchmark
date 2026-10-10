@@ -2,12 +2,17 @@ import streamlit as st
 import os
 import time
 
-# Import our system modular components safely
-from src.ingestion import process_and_index_pdf
-from src.retrieval import configure_retriever
-from src.generation import execute_rag_inference
+# Explicit path tracking fix for local execution mapping
+import sys
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
 
-# Configure a clean, professional, academic UI theme configuration
+# Import modular processing layers safely
+from ingestion import process_and_index_pdf
+from retrieval import configure_retriever
+from generation import execute_rag_inference
+
 st.set_page_config(
     page_title="Local AI Research Assistant", 
     layout="centered",
@@ -17,7 +22,7 @@ st.set_page_config(
 st.title("📄 Local AI Academic Document Assistant")
 st.markdown("---")
 
-# Sidebar - Structured System Configuration Controls 
+# Sidebar - Configuration Controls
 st.sidebar.header("🔬 Pipeline Parameters")
 st.sidebar.markdown("---")
 
@@ -31,65 +36,67 @@ st.sidebar.subheader("🤖 Model Configuration")
 selected_model = st.sidebar.selectbox("Local Inference LLM", ["llama3"])
 temperature = st.sidebar.slider("Inference Temperature", 0.0, 1.0, 0.0, step=0.1)
 
-# Primary Document Drop Zone Interface Layer
+# Monitor parameter state changes to force a re-index if sliders move (Issue 5 Fix)
+current_params = f"{chunk_size}_{chunk_overlap}"
+if "last_compiled_params" not in st.session_state:
+    st.session_state.last_compiled_params = ""
+
 st.subheader("1. Ingest Academic Artifacts")
 uploaded_file = st.file_uploader("Upload target manuscript PDF for system parsing", type=["pdf"])
 
-temp_pdf_path = "temp.pdf"
+temp_pdf_path = os.path.join(BASE_DIR, "temp.pdf")
 
-# Phase 16: Robust Error Handling & Session State Validation Guardrails
 if uploaded_file is not None:
     try:
-        # Check if a brand-new file is dropped to prevent redundant embedding operations
-        if "current_file" not in st.session_state or st.session_state.current_file != uploaded_file.name:
+        # Re-index if either the file name OR the chunk parameters change
+        file_changed = ("current_file" not in st.session_state or st.session_state.current_file != uploaded_file.name)
+        params_changed = (st.session_state.last_compiled_params != current_params)
+        
+        if file_changed or params_changed:
             with open(temp_pdf_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
                 
-            # Verify the file is not empty or corrupted before indexing
             if os.path.getsize(temp_pdf_path) == 0:
-                st.error("❌ Ingestion Failure: The uploaded PDF file appears to be empty or corrupted.")
+                st.error("❌ Ingestion Failure: File is empty or corrupted.")
             else:
-                st.success(f"✅ Target file '{uploaded_file.name}' staged successfully! Initializing pipeline indexing...")
+                st.success(f"✅ Target file '{uploaded_file.name}' staged! Rebuilding index maps...")
                 
-                with st.spinner("Executing dynamic text segmentation and mapping vector space matrix..."):
+                with st.spinner("Recomputing vector space matrix..."):
                     vectorstore, embedding_latency = process_and_index_pdf(
                         temp_pdf_path, chunk_size, chunk_overlap
                     )
-                    
-                    # Lock data indices securely into persistent session container memory
                     st.session_state.vectorstore = vectorstore
                     st.session_state.embedding_latency = embedding_latency
                     st.session_state.current_file = uploaded_file.name
+                    st.session_state.last_compiled_params = current_params
                     
                 st.info(f"⏱️ Vector Database Indexing Latency: {st.session_state.embedding_latency:.2f} seconds")
                 
     except Exception as e:
-        st.error(f"❌ Critical Pipeline Failure during Ingestion: {str(e)}")
-        st.info("💡 Troubleshooting tip: Ensure the Ollama background daemon service is fully running on your Mac.")
+        st.error(f"❌ Ingestion Error: {str(e)}")
 
-    # 2. Query Inference Interface Layer - Only unlocks if database mapping is successful
     if "vectorstore" in st.session_state:
         st.markdown("---")
         st.subheader("2. Execute Grounded Knowledge Extraction")
-        user_query = st.text_input("Enter your research question regarding the document content:")
+        user_query = st.text_input("Enter your research question:")
         
         if user_query:
-            if user_query.strip() == "":
-                st.warning("⚠️ Query Validation Warning: Please input text characters before running query evaluation loops.")
-            else:
-                with st.spinner("Retrieving local similarity records and processing inference loops..."):
+            if user_query.strip() != "":
+                with st.spinner("Processing local inference loops..."):
                     try:
-                        # Pass all variable sliders down to the localized inference engine
-                        answer, citations, generation_latency = execute_rag_inference(
-                            st.session_state.vectorstore, top_k, user_query
+                        # PASSING ALL ACTIVE MODEL CONTROLS DOWN (Issue 5 Fix)
+                        answer, citations, gen_latency = execute_rag_inference(
+                            st.session_state.vectorstore, 
+                            top_k, 
+                            user_query,
+                            selected_model,
+                            temperature
                         )
                         
-                        # Render Clean Academic Terminal Interface Layout 
                         st.markdown("#### 🤖 Grounded System Response")
                         st.info(answer)
-                        st.caption(f"⏱️ Inference Engine Response Latency: {generation_latency:.2f} seconds")
+                        st.caption(f"⏱️ Inference Processing Latency: {gen_latency:.2f} seconds")
                         
-                        # Render Verified System Citations Metadata Array
                         st.markdown("---")
                         st.markdown("#### 📄 Verifiable Academic Citations")
                         
@@ -99,7 +106,6 @@ if uploaded_file is not None:
                         for cite in citations:
                             cite_str = f"{cite['source']} — *Page {cite['page']}*"
                             if cite_str not in seen_citations:
-                                # Ensure we don't display citations if the model answered with a fallback statement
                                 if "I could not find this information" not in answer:
                                     st.markdown(f"**[{cite['index']}]** {cite['source']} — *Page {cite['page']}*")
                                     has_citations = True
@@ -110,5 +116,3 @@ if uploaded_file is not None:
                             
                     except Exception as e:
                         st.error(f"❌ System Inference Error: {str(e)}")
-                        st.info("💡 Troubleshooting tip: Verify your local Llama 3 model weights are initialized via terminal.")
-e.g., Refactor UI layer to add robust parameter controls and pipeline error configurations
