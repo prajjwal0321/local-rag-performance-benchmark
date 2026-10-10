@@ -4,7 +4,7 @@ An empirical evaluation framework designed to benchmark system latency against t
 
 ## 🔬 Complete Research Manuscript
 The empirical research paper detailing our system methodology, hardware benchmarks, and resource parameters is fully open-access:
-👉 **[Read the Full Research Paper (PDF)](./Prajjwal_Singh_RAG_Research_Paper.pdf)**
+ **[Read the Full Research Paper (PDF)](./Prajjwal_Singh_RAG_Research_Paper.pdf)**
 
 
 ## 🚀 System Architecture
