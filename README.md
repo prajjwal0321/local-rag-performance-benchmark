@@ -1,4 +1,4 @@
-# 📄 Local RAG Performance Analysis Framework
+# Local RAG Performance Analysis Framework
 
 An empirical evaluation framework designed to benchmark system latency against textual chunk-size configurations in Retrieval-Augmented Generation (RAG) pipelines using 100% local consumer hardware.
 
